@@ -1,0 +1,8 @@
+{
+  "name": "Remix2",
+  "description": "Comprehensive health misinformation detection, evidence-backed claim credibility analysis, clinical document processing, cross-document discrepancy detection, and multi-role dashboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
