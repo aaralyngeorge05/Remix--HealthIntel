@@ -21,6 +21,7 @@ import {
   UserCheck,
   ShieldCheck,
   Stethoscope,
+  Download,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -138,6 +139,17 @@ export const Header: React.FC<HeaderProps> = ({
                 </>
               )}
             </button>
+
+            {/* Whitepaper PDF Download Button */}
+            <a
+              href="/api/download-whitepaper"
+              download="HealthIntel_Technical_Architecture_Whitepaper.pdf"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sky-200 dark:border-sky-800/60 bg-sky-50/80 dark:bg-sky-950/40 hover:bg-sky-100 text-sky-700 dark:text-sky-300 text-xs font-medium transition-all shadow-2xs"
+              title="Download Technical Architecture Whitepaper (PDF)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Whitepaper (PDF)</span>
+            </a>
 
             {/* Divider */}
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-700/80 mx-1 hidden sm:block" />

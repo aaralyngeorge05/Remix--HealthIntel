@@ -101,6 +101,12 @@ async function startServer() {
     });
   });
 
+  // Whitepaper PDF download endpoint
+  app.get('/api/download-whitepaper', (req: Request, res: Response) => {
+    const filePath = path.join(process.cwd(), 'public', 'HealthIntel_Technical_Architecture_Whitepaper.pdf');
+    res.download(filePath, 'HealthIntel_Technical_Architecture_Whitepaper.pdf');
+  });
+
   // Auth: Mock authentication & role switching
   app.post('/api/auth/login', (req: Request, res: Response) => {
     const { email, role } = req.body;
@@ -201,28 +207,64 @@ async function startServer() {
 
       let extractedText = '';
 
-      // Text Extraction
-      if (file.mimetype === 'text/plain') {
-        extractedText = file.buffer.toString('utf-8');
-      } else if (file.mimetype === 'application/pdf') {
-        try {
-          const pdfParseModule: any = await import('pdf-parse');
-          const pdfParse = pdfParseModule.default || pdfParseModule;
-          const parsed = await pdfParse(file.buffer);
-          extractedText = parsed.text || '';
-        } catch (pdfErr) {
-          console.warn('Local pdf-parse issue, falling back to simulated extraction:', pdfErr);
-          extractedText = file.buffer.toString('utf-8', 0, Math.min(file.buffer.length, 5000));
-        }
-      } else {
-        // Image or other
-        extractedText = `[OCR Extraction from ${file.originalname}]\nClinical Document: ${file.originalname}\nDetected text stream.`;
-      }
+     // Text & OCR Extraction
+if (file.mimetype === 'text/plain') {
+  extractedText = file.buffer.toString('utf-8');
 
-      if (!extractedText.trim()) {
-        extractedText = `CLINICAL MEDICAL DOCUMENT: ${file.originalname}\nPatient: Robert Miller\nDate: ${new Date().toLocaleDateString()}\nNote: Text processed from upload.`;
-      }
+} else if (file.mimetype === 'application/pdf') {
+  try {
+    const pdfParseModule: any = await import('pdf-parse');
+    const pdfParse = pdfParseModule.default || pdfParseModule;
+    const parsed = await pdfParse(file.buffer);
+    extractedText = parsed.text || '';
 
+  } catch (pdfErr) {
+    console.error('PDF text extraction failed:', pdfErr);
+    extractedText = '';
+  }
+
+} else if (
+  file.mimetype === 'image/jpeg' ||
+  file.mimetype === 'image/png'
+) {
+  const imageBase64 = file.buffer.toString('base64');
+
+  const imageAnalysis = await AIService.analyzeDocumentImage(
+    file.originalname,
+    file.mimetype,
+    imageBase64
+  );
+
+  extractedText = imageAnalysis.extractedText;
+
+  const newDoc: PatientDocument = {
+    id: `doc-${Date.now()}`,
+    patientId,
+    filename: file.originalname,
+    fileType: file.mimetype,
+    category: category as any,
+    fileSize: file.size,
+    uploadDate: new Date().toISOString(),
+    pageCount: 1,
+    extractedText,
+    extractedInfo: imageAnalysis.extractedInfo,
+  };
+
+  res.json({
+    document: newDoc,
+    patient: null,
+  });
+
+  return;
+}
+
+if (!extractedText.trim()) {
+  return res.status(422).json({
+    error: 'Unable to extract text from this document.',
+    details:
+      'The document may be image-based or contain no readable text. OCR processing is required.'
+  });
+}
       // Analyze extracted text via AI Service
       const extractedInfo = await AIService.analyzeDocumentText(file.originalname, extractedText);
 

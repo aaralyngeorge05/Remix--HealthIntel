@@ -457,6 +457,45 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
                 <p className="text-xs text-slate-400 italic">Not available in provided records.</p>
               )}
             </div>
+                    {/* Single-Document Inconsistency Detection */}
+          <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-3">
+              Document Inconsistencies ({processedDoc.extractedInfo?.inconsistencies?.length || 0})
+            </h4>
+
+            {processedDoc.extractedInfo?.inconsistencies &&
+            processedDoc.extractedInfo.inconsistencies.length > 0 ? (
+              <div className="space-y-3">
+                {processedDoc.extractedInfo.inconsistencies.map((item, i) => (
+                  <div
+                    key={i}
+                    className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/60"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        {item.type}
+                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300">
+                        {item.severity} Severity
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-700 dark:text-slate-300">
+                      {item.description}
+                    </p>
+
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      <strong>Evidence:</strong> {item.evidence}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                No inconsistencies were identified by the analysis. This does not guarantee that the document is error-free.
+              </p>
+                       )}
+          </div>
           </div>
         </div>
       )}

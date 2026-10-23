@@ -317,7 +317,7 @@ CRITICAL INSTRUCTIONS:
 }`;
 
         const response = await client.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.8-flash',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -337,7 +337,114 @@ CRITICAL INSTRUCTIONS:
     // Fallback extraction
     return this.ruleBasedExtraction(filename, extractedText);
   }
+public static async analyzeDocumentImage(
+  filename: string,
+  mimeType: string,
+  imageBase64: string
+): Promise<{
+  extractedText: string;
+  extractedInfo: Partial<ExtractedMedicalInformation>;
+}> {
+  const client = getGeminiClient();
 
+  if (!client) {
+    throw new Error('Gemini API is not configured for document OCR.');
+  }
+
+  const prompt = `You are processing a clinical medical document image.
+
+Your tasks are:
+
+1. Read and transcribe ALL clinically relevant text visible in the image.
+2. Preserve the wording and numbers as accurately as possible.
+3. Do NOT invent text that is not visible.
+4. Then extract structured clinical information from the transcribed text.
+5. Identify inconsistencies that exist WITHIN THIS SINGLE DOCUMENT.
+6. If information is missing or unclear, explicitly say so rather than guessing.
+
+Filename: "${filename}"
+
+Return ONLY valid JSON with this structure:
+
+{
+  "extractedText": "complete transcription of the visible document text",
+  "patientName": "string or Not available in provided records",
+  "age": "string or Not available in provided records",
+  "dateOfBirth": "string or Not available in provided records",
+  "sex": "string or Not available in provided records",
+  "conditions": [],
+  "symptoms": [],
+  "medications": [],
+  "allergies": [],
+  "investigations": [],
+  "procedures": [],
+  "followUp": [],
+  "inconsistencies": [
+    {
+      "type": "string",
+      "description": "string",
+      "evidence": "string",
+      "severity": "Low|Medium|High"
+    }
+  ]
+}
+
+For clinical entities, preserve the existing HealthIntel structure:
+- conditions: id, name, status, sourceDoc, page, originalText
+- symptoms: id, name, severity, duration, sourceDoc, page, originalText
+- medications: id, name, dosage, frequency, route, purpose, status, sourceDoc, page, originalText
+- allergies: id, allergen, reaction, severity, sourceDoc, page, originalText
+- investigations: id, testName, result, unit, referenceRange, flag, sourceDoc, page, originalText
+- procedures: id, name, date, sourceDoc, page, originalText
+- followUp: instructions, timeframe, sourceDoc, page, originalText
+
+Only report an inconsistency when two or more pieces of information in THIS SAME DOCUMENT conflict with each other. Do not compare against external medical knowledge or other patient documents.`;
+
+  const response = await client.models.generateContent({
+    model: 'gemini-3.8-flash',
+    contents: [
+      {
+        text: prompt,
+      },
+      {
+        inlineData: {
+          mimeType,
+          data: imageBase64,
+        },
+      },
+    ],
+    config: {
+      responseMimeType: 'application/json',
+      temperature: 0.1,
+    },
+  });
+
+  const text = response.text?.trim();
+
+  if (!text) {
+    throw new Error('Gemini returned no OCR result.');
+  }
+
+  const parsed = JSON.parse(text);
+
+  return {
+    extractedText: parsed.extractedText || '',
+    extractedInfo: {
+      patientName: parsed.patientName,
+      age: parsed.age,
+      dateOfBirth: parsed.dateOfBirth,
+      sex: parsed.sex,
+      conditions: parsed.conditions || [],
+      symptoms: parsed.symptoms || [],
+      medications: parsed.medications || [],
+      allergies: parsed.allergies || [],
+      investigations: parsed.investigations || [],
+      procedures: parsed.procedures || [],
+      followUp: parsed.followUp || [],
+      inconsistencies: parsed.inconsistencies || [],
+    },
+  };
+}
   /**
    * Rule-based extraction fallback for structured clinical data
    */

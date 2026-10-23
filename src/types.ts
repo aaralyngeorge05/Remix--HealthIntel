@@ -64,6 +64,7 @@ export interface EvidenceSource {
   language: string;
 
   isPeerReviewed?: boolean;
+  relevanceScore?: number;
 }
 
 export type MedicalEvidenceItem = EvidenceSource;
@@ -158,6 +159,12 @@ export interface ExtractedMedicalInformation {
     page: number;
     originalText: string;
   }[];
+  inconsistencies?: {
+  type: string;
+  description: string;
+  evidence: string;
+  severity: 'Low' | 'Medium' | 'High';
+}[];
 }
 
 export type DocumentCategory =
